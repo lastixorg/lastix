@@ -1,0 +1,31 @@
+name: gcc
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        gcc: [14]
+        build_type: [Debug]
+        std: [23]
+    env:
+      CC: gcc-${{matrix.gcc}}
+      CXX: g++-${{matrix.gcc}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: CXXFLAGS="-g3" cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DCMAKE_CXX_STANDARD=${{matrix.std}}
+
+      - name: Build
+        run: cmake --build build -j $(nproc)

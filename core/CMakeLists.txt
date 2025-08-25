@@ -1,5 +1,6 @@
 lastix_add_library(
     lastix.core
+    "lastix/core/box.hpp"
     "lastix/core/diagnostics.hpp"
     "lastix/core/diagnostics.cpp"
 )

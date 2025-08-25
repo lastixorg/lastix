@@ -22,7 +22,7 @@ jobs:
       CXX: g++-${{matrix.gcc}}
 
     steps:
-      - uses: actions/checkout@4
+      - uses: actions/checkout@v4
 
       - name: Configure CMake
         run: CXXFLAGS="-g3" cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DCMAKE_CXX_STANDARD=${{matrix.std}}

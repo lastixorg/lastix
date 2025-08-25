@@ -1,4 +1,4 @@
-name: gcc
+name: gcc-x86
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
       CXX: g++-${{matrix.gcc}}
 
     steps:
-      - uses: actions/checkout@4
+      - uses: actions/checkout@v4
 
       - name: Setup environment
         run: |

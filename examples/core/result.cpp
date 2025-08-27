@@ -1,6 +1,9 @@
 #include "lastix/core/result.hpp"
 #include "lastix/core/number.hpp"
 
+#include <string>
+#include <print>
+
 using namespace lx::core;
 
 // Result<T, E> currently does not support T or E being void

@@ -19,6 +19,17 @@ target_link_libraries(
 )
 
 lastix_add_executable(
+    example-core-error
+    "error.cpp"
+)
+
+target_link_libraries(
+    example-core-error PRIVATE
+    lastix::core
+)
+
+
+lastix_add_executable(
     example-core-result
     "result.cpp"
 )

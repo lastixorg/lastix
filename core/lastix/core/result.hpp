@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lastix/core/diagnostics.cpp"
+#include "lastix/core/diagnostics.hpp"
 #include "lastix/core/option.hpp"
 
 #include <variant>
@@ -53,12 +53,15 @@ namespace lx::core {
         ResultEnumeration(ResultEnumeration<U, ErrTag>)
             -> ResultEnumeration<ResultEnumeration<U, ErrTag>, ErrTag>;
 
+        template <class T>
+        concept WithContext = requires(T t) { t.context(""); };
+
     }; // namespace impl
 
     template <class T> using Ok = impl::ResultEnumeration<T, impl::OkTag>;
     template <class E> using Err = impl::ResultEnumeration<E, impl::ErrTag>;
 
-    template <class T, class E> class Result {
+    template <class T, class E> class [[nodiscard]] Result {
         public:
             using Value = T;
             using Error = E;
@@ -80,6 +83,32 @@ namespace lx::core {
             requires std::convertible_to<F, E>
             Result(Err<F> error) noexcept
                 : _variant(Err<E>{*std::move(error)}) {
+            }
+
+            template <class U = void>
+            requires impl::WithContext<E>
+            [[nodiscard]] auto context(std::string_view msg) & noexcept
+                -> Result<T, E>& {
+
+                if (this->is_err()) {
+                    auto& e = this->unwrap_err();
+                    e = e.context(msg);
+                }
+
+                return *this;
+            }
+
+            template <class U = void>
+            requires impl::WithContext<E>
+            [[nodiscard]] auto context(std::string_view msg) && noexcept
+                -> Result<T, E>&& {
+
+                if (this->is_err()) {
+                    auto& e = this->unwrap_err();
+                    e = e.context(msg);
+                }
+
+                return std::move(*this);
             }
 
             [[nodiscard]] auto is_ok() const noexcept -> bool {

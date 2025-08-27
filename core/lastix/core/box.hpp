@@ -13,11 +13,26 @@ namespace lx::core {
                 : _ptr(new T(std::forward<Args>(args)...)) {
             }
 
+            template <class U>
+            requires std::derived_from<U, T>
+            Box(Box<U> &&other) noexcept : _ptr(other.release()) {
+            }
+
             ~Box() noexcept {
                 this->reset();
             }
 
             Box(Box &&box) noexcept : _ptr(box.release()) {
+            }
+
+            template <class U>
+            requires std::derived_from<U, T>
+            auto operator=(Box<U> &&other) noexcept -> Box & {
+
+                this->reset();
+                _ptr = other.release();
+
+                return *this;
             }
 
             auto operator=(Box &&box) noexcept -> Box & {

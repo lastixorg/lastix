@@ -18,7 +18,12 @@ struct Derived : Base {
 
 struct FlagDeleter {
         auto operator()(i32* ptr) const noexcept -> void {
-            deleted = true;
+
+            // Box can call deleter{}(nullptr) if reset() or release() was
+            // called. According to c++ standard, it's safe to call delete
+            // nullptr, so we are going to do the same
+            if (ptr != nullptr) deleted = true;
+
             delete ptr;
         }
 

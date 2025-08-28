@@ -15,6 +15,7 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
 endif()
 
 option(LASTIX_BUILD_EXAMPLES "Build examples" ON)
+option(LASTIX_BUILD_TESTS "Build tests" ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
@@ -31,9 +32,15 @@ if(CCACHE_PROGRAM)
 endif()
 
 include("cmake/lastix.cmake")
+include("cmake/CPM.cmake")
 
 add_subdirectory("core/")
 
 if(LASTIX_BUILD_EXAMPLES)
     add_subdirectory("examples/")
+endif()
+
+if (LASTIX_BUILD_TESTS)
+    include(CTest)
+    add_subdirectory("tests/")
 endif()

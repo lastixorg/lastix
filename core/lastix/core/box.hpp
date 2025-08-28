@@ -5,7 +5,19 @@
 
 namespace lx::core {
 
-    template <class T> class Box {
+    template <class T> struct DefaultDeleter {
+            auto operator()(T *ptr) const noexcept -> void {
+                delete ptr;
+            }
+    };
+
+    template <class T> struct DefaultDeleter<T[]> {
+            auto operator()(T *ptr) const noexcept -> void {
+                delete[] ptr;
+            }
+    };
+
+    template <class T, class Deleter = DefaultDeleter<T>> class Box {
 
         public:
             template <class... Args>
@@ -23,6 +35,12 @@ namespace lx::core {
             }
 
             Box(Box &&box) noexcept : _ptr(box.release()) {
+            }
+
+            [[nodiscard]] static auto unsafe_from_raw(T *ptr)
+                -> Box<T, Deleter> {
+
+                return Box<T, Deleter>(ptr);
             }
 
             template <class U>
@@ -89,14 +107,12 @@ namespace lx::core {
 
             auto reset() noexcept -> void {
 
-                delete std::exchange(_ptr, nullptr);
+                Deleter{}(std::exchange(_ptr, nullptr));
             }
 
             [[nodiscard]] auto release() noexcept -> T * {
 
-                T *tmp = _ptr;
-                _ptr = nullptr;
-                return tmp;
+                return std::exchange(_ptr, nullptr);
             }
 
             auto unsafe_get() & noexcept -> T * {
@@ -111,6 +127,10 @@ namespace lx::core {
 
             Box(const Box &) = delete;
             auto operator=(const Box &) -> Box & = delete;
+
+        private:
+            Box(T *ptr) : _ptr(ptr) {
+            }
 
         private:
             T *_ptr = nullptr;

@@ -106,6 +106,14 @@ namespace lx::core {
                 std::swap(_value, other._value);
             }
 
+            auto operator==(const Option& other) const noexcept -> bool {
+                return _value == other._value;
+            }
+
+            auto operator==(NoneType) const noexcept -> bool {
+                return this->is_none();
+            }
+
             operator bool() const noexcept {
                 return this->is_some();
             }

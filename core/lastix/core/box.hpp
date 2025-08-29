@@ -1,26 +1,16 @@
 #pragma once
 
 #include "lastix/core/diagnostics.hpp"
+#include "lastix/core/memory.hpp"
 #include <utility>
 
 namespace lx::core {
-
-    template <class T> struct DefaultDeleter {
-            auto operator()(T *ptr) const noexcept -> void {
-                delete ptr;
-            }
-    };
-
-    template <class T> struct DefaultDeleter<T[]> {
-            auto operator()(T *ptr) const noexcept -> void {
-                delete[] ptr;
-            }
-    };
 
     template <class T, class Deleter = DefaultDeleter<T>> class Box {
 
         public:
             template <class... Args>
+            requires std::constructible_from<T, Args...>
             explicit Box(Args &&...args) noexcept
                 : _ptr(new T(std::forward<Args>(args)...)) {
             }

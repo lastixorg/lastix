@@ -12,13 +12,28 @@ list(
 add_executable(
     lastix-tests
     "main.cpp"
+    "core/arc.cpp"
     "core/box.cpp"
+    "core/memory_helpers.cpp"
+    "core/memory_helpers.hpp"
+)
+
+target_compile_options(lastix-tests PRIVATE
+    -fsanitize=address
+    -fsanitize=leak
+    -fsanitize=undefined
+    -fno-sanitize-recover=all
+    -fno-omit-frame-pointer
+    -g3
 )
 
 target_link_libraries(
     lastix-tests PRIVATE
     lastix::core
     Catch2::Catch2WithMain
+    -fsanitize=address
+    -fsanitize=leak
+    -fsanitize=undefined
 )
 
 include(Catch)

@@ -1,4 +1,14 @@
 lastix_add_executable(
+    example-core-arc
+    "arc.cpp"
+)
+
+target_link_libraries(
+    example-core-arc PRIVATE
+    lastix::core
+)
+
+lastix_add_executable(
     example-core-box
     "box.cpp"
 )

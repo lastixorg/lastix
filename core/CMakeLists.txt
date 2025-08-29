@@ -7,6 +7,7 @@ lastix_add_library(
     "lastix/core/error.hpp"
     "lastix/core/option.hpp"
     "lastix/core/result.hpp"
+    "lastix/trait/sync.hpp"
 )
 
 target_include_directories(

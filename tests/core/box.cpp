@@ -1,36 +1,7 @@
 #include "catch2/catch_test_macros.hpp"
 #include "lastix/core/box.hpp"
 #include "lastix/core/number.hpp"
-
-using namespace lx::core;
-
-struct TestStruct {
-        i32 x = 0;
-};
-
-struct Base {
-        i32 a = 0;
-};
-
-struct Derived : Base {
-        i32 b = 7;
-};
-
-struct FlagDeleter {
-        auto operator()(i32* ptr) const noexcept -> void {
-
-            // Box can call deleter{}(nullptr) if reset() or release() was
-            // called. According to c++ standard, it's safe to call delete
-            // nullptr, so we are going to do the same
-            if (ptr != nullptr) deleted = true;
-
-            delete ptr;
-        }
-
-        static thread_local bool deleted;
-};
-
-thread_local bool FlagDeleter::deleted = false;
+#include "memory_helpers.hpp"
 
 TEST_CASE("Box basic construction", "[lx::core::Box]") {
     auto ptr = Box<TestStruct>(42);
@@ -79,6 +50,9 @@ TEST_CASE("Box reset", "[lx::core::Box]") {
         REQUIRE(*ptr == 52);
         ptr.reset();
         REQUIRE(!static_cast<bool>(ptr));
+
+        // Try to reset null Box
+        ptr.reset();
     }
     REQUIRE(FlagDeleter::deleted);
 }

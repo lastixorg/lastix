@@ -6,9 +6,6 @@
 
 using namespace lx::core;
 
-// Result<T, E> currently does not support T or E being void
-struct Empty {};
-
 static auto foo() -> Result<i32, std::string> {
 
     return Ok(-100);
@@ -22,13 +19,13 @@ static auto bar() -> Result<i32, std::string> {
     else return Err("x > 0 is expected");
 }
 
-static auto baz() -> Result<Empty, i32> {
+static auto baz() -> Result<void, i32> {
 
     auto val = bar();
 
     if (val.is_ok()) {
         std::println("bar() succeeded: {}", val.ok().unwrap());
-        return Ok(Empty());
+        return Ok();
     }
 
     auto err = val.unwrap_err();

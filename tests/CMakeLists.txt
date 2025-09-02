@@ -16,6 +16,7 @@ add_executable(
     "core/box.cpp"
     "core/memory_helpers.cpp"
     "core/memory_helpers.hpp"
+    "core/result.cpp"
 )
 
 target_compile_options(lastix-tests PRIVATE

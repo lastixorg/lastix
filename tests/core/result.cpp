@@ -6,6 +6,23 @@
 
 using namespace lx::core;
 
+enum class ErrorA {
+    IoError,
+    PermissionDenied,
+    NotFound,
+};
+
+enum class ErrorB {
+    FileError,
+    SomeOtherError,
+};
+
+template <> struct lx::trait::FromImpl<ErrorA, ErrorB> {
+        static auto from(ErrorA) -> ErrorB {
+            return ErrorB::FileError;
+        }
+};
+
 TEST_CASE("Result basic Ok construction", "[lx::core::Result]") {
     Result<i32, void> r = Ok(42);
     REQUIRE(r.is_ok());
@@ -50,4 +67,19 @@ TEST_CASE("Result move", "[lx::core::Result]") {
     auto c0 = std::move(r0);
     REQUIRE(c0.is_ok());
     REQUIRE(c0.unwrap() == 10);
+}
+
+TEST_CASE("Result construction with From trait", "[lx::core::Result]") {
+    auto f0 = [] -> Result<void, ErrorB> {
+        auto f1 = [] -> Result<void, ErrorA> {
+            return Err(ErrorA::IoError);
+        };
+
+        return Err(f1().unwrap_err());
+    };
+
+    auto r0 = f0();
+
+    REQUIRE(r0.is_err());
+    REQUIRE(r0.unwrap_err() == ErrorB::FileError);
 }

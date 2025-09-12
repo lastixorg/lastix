@@ -2,6 +2,7 @@
 
 #include "lastix/core/diagnostics.hpp"
 #include "lastix/core/option.hpp"
+#include "lastix/trait/from.hpp"
 
 #include <variant>
 #include <utility>
@@ -105,16 +106,32 @@ namespace lx::core {
 
             /// Accept convertible Ok<U> if U -> T
             template <class U>
-            requires std::convertible_to<U, Value>
+            requires(!lx::trait::From<U, T> && std::convertible_to<U, Value>)
             Result(Ok<U> value) noexcept
                 : _variant(Ok<Value>{*std::move(value)}) {
             }
 
             /// Accept convertible Err<F> if F -> E
             template <class F>
-            requires std::convertible_to<F, Error>
+            requires(!lx::trait::From<F, E> && std::convertible_to<F, Error>)
             Result(Err<F> error) noexcept
                 : _variant(Err<Error>{*std::move(error)}) {
+            }
+
+            /// Accept From<U, T>
+            template <class U>
+            requires lx::trait::From<U, T>
+            Result(Ok<U> value) noexcept
+                : _variant(Ok<Value>{
+                      lx::trait::FromImpl<U, T>::from(*std::move(value))}) {
+            }
+
+            /// Accept From<F, E>
+            template <class F>
+            requires lx::trait::From<F, E>
+            Result(Err<F> error) noexcept
+                : _variant(Err<Error>{
+                      lx::trait::FromImpl<F, E>::from(*std::move(error))}) {
             }
 
             auto operator==(const Result& other) const noexcept -> bool {

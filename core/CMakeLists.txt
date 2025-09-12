@@ -10,6 +10,7 @@ lastix_add_library(
     "lastix/core/option.hpp"
     "lastix/core/result.hpp"
     "lastix/trait/sync.hpp"
+    "lastix/trait/from.hpp"
 )
 
 target_include_directories(

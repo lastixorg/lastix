@@ -16,6 +16,4 @@ namespace lx::trait {
         { FromImpl<FromType, ToType>::from(t) } -> std::convertible_to<ToType>;
     };
 
-    static constexpr auto x = From<int, double>;
-
 }; // namespace lx::trait

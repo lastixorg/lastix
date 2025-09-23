@@ -20,16 +20,9 @@ namespace lx::core {
             //     : _value(std::forward<Args>(args)...) {
             // }
 
-            auto operator*() & noexcept -> T& {
-                return _value;
-            }
-
-            auto operator*() const& noexcept -> const T& {
-                return _value;
-            }
-
-            auto operator*() && noexcept -> T&& {
-                return std::move(_value);
+            template <class Self>
+            auto operator*(this Self&& self) noexcept -> decltype(auto) {
+                return std::forward_like<Self>(self._value);
             }
 
         private:
@@ -38,7 +31,7 @@ namespace lx::core {
 
     template <class U> Some(Some<U> s) -> Some<Some<U>>;
 
-    template <class T> class Option {
+    template <class T> class [[nodiscard]] Option {
 
         public:
             Option(NoneType) : _value(None) {
@@ -60,46 +53,24 @@ namespace lx::core {
                 return !this->is_some();
             }
 
-            auto unwrap() & noexcept -> T& {
-                if (!_value) [[unlikely]]
-                    panic("Called unwrap() on None");
-
-                return *_value;
+            template <class Self>
+            auto unwrap(this Self&& self,
+                        std::source_location loc =
+                            std::source_location::current()) noexcept
+                -> decltype(auto) {
+                return std::forward<Self>(self).expect(
+                    "Called unwrap() on None", loc);
             }
 
-            auto unwrap() const& noexcept -> const T& {
-                if (!_value) [[unlikely]]
-                    panic("Called unwrap() on None");
+            template <class Self>
+            auto expect(this Self&& self, std::string_view msg,
+                        std::source_location loc =
+                            std::source_location::current()) noexcept
+                -> decltype(auto) {
+                if (!self._value) [[unlikely]]
+                    panic(msg, loc);
 
-                return *_value;
-            }
-
-            auto unwrap() && noexcept -> T&& {
-                if (!_value) [[unlikely]]
-                    panic("Called unwrap() on None");
-
-                return std::move(*_value);
-            }
-
-            auto expect(std::string_view msg) & noexcept -> T& {
-                if (!_value) [[unlikely]]
-                    panic(msg);
-
-                return *_value;
-            }
-
-            auto expect(std::string_view msg) const& noexcept -> const T& {
-                if (!_value) [[unlikely]]
-                    panic(msg);
-
-                return *_value;
-            }
-
-            auto expect(std::string_view msg) && noexcept -> T&& {
-                if (!_value) [[unlikely]]
-                    panic(msg);
-
-                return std::move(*_value);
+                return std::forward_like<Self>(*self._value);
             }
 
             auto swap(Option& other) noexcept -> void {

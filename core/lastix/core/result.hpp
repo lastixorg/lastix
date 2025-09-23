@@ -11,27 +11,20 @@ namespace lx::core {
 
     namespace impl {
 
-        template <class T, class Tag> class ResultEnumeration {
+        template <class T, class Tag> class ResultTaggedValue {
             public:
-                ResultEnumeration() noexcept = default;
+                ResultTaggedValue() noexcept = default;
 
-                explicit ResultEnumeration(T value) noexcept
+                explicit ResultTaggedValue(T value) noexcept
                     : _value(std::move(value)) {
                 }
 
-                auto operator*() & noexcept -> T& {
-                    return _value;
+                template <class Self>
+                auto operator*(this Self&& self) noexcept -> decltype(auto) {
+                    return std::forward_like<Self>(self._value);
                 }
 
-                auto operator*() const& noexcept -> const T& {
-                    return _value;
-                }
-
-                auto operator*() && noexcept -> T&& {
-                    return std::move(_value);
-                }
-
-                auto operator==(const ResultEnumeration& other) const noexcept
+                auto operator==(const ResultTaggedValue& other) const noexcept
                     -> bool {
                     return _value == other._value;
                 }
@@ -40,10 +33,10 @@ namespace lx::core {
                 T _value;
         };
 
-        template <class Tag> class ResultEnumeration<void, Tag> {
+        template <class Tag> class ResultTaggedValue<void, Tag> {
 
             public:
-                ResultEnumeration() = default;
+                ResultTaggedValue() = default;
         };
 
         struct OkTag {};
@@ -51,13 +44,13 @@ namespace lx::core {
 
         // Handle Ok(Ok(...))
         template <class U>
-        ResultEnumeration(ResultEnumeration<U, OkTag>)
-            -> ResultEnumeration<ResultEnumeration<U, OkTag>, OkTag>;
+        ResultTaggedValue(ResultTaggedValue<U, OkTag>)
+            -> ResultTaggedValue<ResultTaggedValue<U, OkTag>, OkTag>;
 
         // Handle Err(Err(...))
         template <class U>
-        ResultEnumeration(ResultEnumeration<U, ErrTag>)
-            -> ResultEnumeration<ResultEnumeration<U, ErrTag>, ErrTag>;
+        ResultTaggedValue(ResultTaggedValue<U, ErrTag>)
+            -> ResultTaggedValue<ResultTaggedValue<U, ErrTag>, ErrTag>;
 
         struct Empty {};
 
@@ -79,59 +72,55 @@ namespace lx::core {
     using Empty = impl::Empty;
 
     template <class T = void>
-    using Ok = impl::ResultEnumeration<T, impl::OkTag>;
+    using Ok = impl::ResultTaggedValue<T, impl::OkTag>;
     template <class E = void>
-    using Err = impl::ResultEnumeration<E, impl::ErrTag>;
+    using Err = impl::ResultTaggedValue<E, impl::ErrTag>;
 
     template <class T, class E> class [[nodiscard]] Result {
         public:
             using Value = impl::VoidOrType<T>;
             using Error = impl::VoidOrType<E>;
-            using VariantType = std::variant<Ok<Value>, Err<Error>>;
+            using VariantType = std::variant<Value, Error>;
 
-            Result(Ok<Value> value) noexcept : _variant(std::move(value)) {
+            Result(Ok<Value> value) noexcept : _variant(*std::move(value)) {
             }
-            Result(Err<Error> error) noexcept : _variant(std::move(error)) {
+            Result(Err<Error> error) noexcept : _variant(*std::move(error)) {
             }
 
             template <class U = void>
             requires std::same_as<T, void>
-            Result(Ok<void>) noexcept : _variant(Ok<Value>()) {
+            Result(Ok<void>) noexcept : _variant(Value{}) {
             }
 
             template <class F = void>
             requires std::same_as<E, void>
-            Result(Err<void>) noexcept : _variant(Err<Error>()) {
+            Result(Err<void>) noexcept : _variant(Error{}) {
             }
 
             /// Accept convertible Ok<U> if U -> T
             template <class U>
             requires(!lx::trait::From<U, T> && std::convertible_to<U, Value>)
-            Result(Ok<U> value) noexcept
-                : _variant(Ok<Value>{*std::move(value)}) {
+            Result(Ok<U> value) noexcept : _variant(*std::move(value)) {
             }
 
             /// Accept convertible Err<F> if F -> E
             template <class F>
             requires(!lx::trait::From<F, E> && std::convertible_to<F, Error>)
-            Result(Err<F> error) noexcept
-                : _variant(Err<Error>{*std::move(error)}) {
+            Result(Err<F> error) noexcept : _variant(*std::move(error)) {
             }
 
             /// Accept From<U, T>
             template <class U>
             requires lx::trait::From<U, T>
             Result(Ok<U> value) noexcept
-                : _variant(Ok<Value>{
-                      lx::trait::FromImpl<U, T>::from(*std::move(value))}) {
+                : _variant(lx::trait::FromImpl<U, T>::from(*std::move(value))) {
             }
 
             /// Accept From<F, E>
             template <class F>
             requires lx::trait::From<F, E>
             Result(Err<F> error) noexcept
-                : _variant(Err<Error>{
-                      lx::trait::FromImpl<F, E>::from(*std::move(error))}) {
+                : _variant(lx::trait::FromImpl<F, E>::from(*std::move(error))) {
             }
 
             auto operator==(const Result& other) const noexcept -> bool {
@@ -165,116 +154,78 @@ namespace lx::core {
             }
 
             [[nodiscard]] auto is_ok() const noexcept -> bool {
-                return std::holds_alternative<Ok<Value>>(_variant);
+                return std::holds_alternative<Value>(_variant);
             }
 
             [[nodiscard]] auto is_err() const noexcept -> bool {
-                return std::holds_alternative<Err<Error>>(_variant);
+                return std::holds_alternative<Error>(_variant);
             }
 
             [[nodiscard]] auto ok() const& noexcept -> Option<Value> {
-                if (auto* p = std::get_if<Ok<Value>>(&_variant))
-                    return Some(**p);
+                if (auto* p = std::get_if<Value>(&_variant)) return Some(*p);
 
                 return None;
             }
 
             [[nodiscard]] auto ok() && noexcept -> Option<Value> {
-                if (auto* p = std::get_if<Ok<Value>>(&_variant))
-                    return Some(std::move(**p));
+                if (auto* p = std::get_if<Value>(&_variant))
+                    return Some(std::move(*p));
 
                 return None;
             }
 
             [[nodiscard]] auto err() const& noexcept -> Option<Error> {
-                if (auto* p = std::get_if<Err<Error>>(&_variant))
-                    return Some(**p);
+                if (auto* p = std::get_if<Error>(&_variant)) return Some(*p);
 
                 return None;
             }
 
             [[nodiscard]] auto err() && noexcept -> Option<Error> {
-                if (auto* p = std::get_if<Err<Error>>(&_variant))
-                    return Some(std::move(**p));
+                if (auto* p = std::get_if<Error>(&_variant))
+                    return Some(std::move(*p));
 
                 return None;
             }
 
-            auto unwrap() & noexcept -> Value& {
-                if (auto* p = std::get_if<Ok<Value>>(&_variant)) return **p;
-
-                panic("Called unwrap() on Err");
+            template <class Self>
+            auto unwrap(this Self&& self,
+                        std::source_location loc =
+                            std::source_location::current()) noexcept
+                -> decltype(auto) {
+                return std::forward<Self>(self).expect("Called unwrap() on Err",
+                                                       loc);
             }
 
-            auto unwrap() const& noexcept -> const Value& {
-                if (auto* p = std::get_if<Ok<Value>>(&_variant)) return **p;
+            template <class Self>
+            auto expect(this Self&& self, std::string_view msg,
+                        std::source_location loc =
+                            std::source_location::current()) noexcept
+                -> decltype(auto) {
+                if (auto* p = std::get_if<Value>(&self._variant))
+                    return std::forward_like<Self>(*p);
 
-                panic("Called unwrap() on Err");
+                panic(msg, loc);
             }
 
-            auto unwrap() && noexcept -> Value&& {
-                if (auto* p = std::get_if<Ok<Value>>(&_variant))
-                    return std::move(**p);
-
-                panic("Called unwrap() on Err");
+            template <class Self>
+            auto unwrap_err(this Self&& self,
+                            std::source_location loc =
+                                std::source_location::current()) noexcept
+                -> decltype(auto) {
+                return std::forward<Self>(self).expect_err(
+                    "Called unwrap_err() on Ok", loc);
             }
 
-            auto expect(std::string_view msg) & noexcept -> Value& {
-                if (auto* p = std::get_if<Ok<Value>>(&_variant)) return **p;
+            template <class Self>
+            auto expect_err(this Self&& self, std::string_view msg,
+                            std::source_location loc =
+                                std::source_location::current()) noexcept
+                -> decltype(auto) {
+                if (auto* p = std::get_if<Error>(&self._variant)) {
+                    return std::forward_like<Self>(*p);
+                };
 
-                panic(msg);
-            }
-
-            auto expect(std::string_view msg) const& noexcept -> const Value& {
-                if (auto* p = std::get_if<Ok<Value>>(&_variant)) return **p;
-
-                panic(msg);
-            }
-
-            auto expect(std::string_view msg) && noexcept -> Value&& {
-                if (auto* p = std::get_if<Ok<Value>>(&_variant))
-                    return std::move(**p);
-
-                panic(msg);
-            }
-
-            auto unwrap_err() & noexcept -> Error& {
-                if (auto* p = std::get_if<Err<Error>>(&_variant)) return **p;
-
-                panic("Called unwrap_err() on Ok");
-            }
-
-            auto unwrap_err() const& noexcept -> const Error& {
-                if (auto* p = std::get_if<Err<Error>>(&_variant)) return **p;
-
-                panic("Called unwrap_err() on Ok");
-            }
-
-            auto unwrap_err() && noexcept -> Error&& {
-                if (auto* p = std::get_if<Err<Error>>(&_variant))
-                    return std::move(**p);
-
-                panic("Called unwrap_err() on Ok");
-            }
-
-            auto expect_err(std::string_view msg) & noexcept -> Error& {
-                if (auto* p = std::get_if<Err<Error>>(&_variant)) return **p;
-
-                panic(msg);
-            }
-
-            auto expect_err(std::string_view msg) const& noexcept
-                -> const Error& {
-                if (auto* p = std::get_if<Err<Error>>(&_variant)) return **p;
-
-                panic(msg);
-            }
-
-            auto expect_err(std::string_view msg) && noexcept -> Error&& {
-                if (auto* p = std::get_if<Err<Error>>(&_variant))
-                    return std::move(**p);
-
-                panic(msg);
+                panic(msg, loc);
             }
 
         private:
